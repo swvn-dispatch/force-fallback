@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Container, Group, Title, SimpleGrid, Center, Loader, Text, ActionIcon, Tooltip } from '@mantine/core';
-import { RefreshCw, LogOut } from 'lucide-react';
+import { AppShell, Group, Image, Button, ActionIcon, Stack, Text, SimpleGrid, Center, Loader } from '@mantine/core';
+import { IconRefresh, IconLogout } from '@tabler/icons-react';
+import logoUrl from '/logo.png';
 import { listSessions } from '../api.js';
 import SessionCard from './SessionCard.jsx';
 
@@ -9,6 +10,7 @@ const POLL_MS = 5000;
 export default function SessionsList({ onLoggedOut }) {
   const [sessions, setSessions] = useState(null);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -27,45 +29,60 @@ export default function SessionsList({ onLoggedOut }) {
     return () => clearInterval(id);
   }, [refresh]);
 
+  async function handleManualRefresh() {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }
+
   return (
-    <Container size="lg" py="md">
-      <Group justify="space-between" mb="md">
-        <Title order={2}>Active Sessions</Title>
-        <Group gap="xs">
-          <Tooltip label="Refresh now">
-            <ActionIcon variant="subtle" onClick={refresh} aria-label="Refresh">
-              <RefreshCw size={18} />
+    <AppShell header={{ height: 56 }}>
+      <AppShell.Header>
+        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
+          <Image src={logoUrl} h={32} w="auto" style={{ flexShrink: 0 }} />
+          <Group gap="xs" wrap="nowrap">
+            <Button size="sm" leftSection={<IconRefresh size={16} />} loading={refreshing} onClick={handleManualRefresh} visibleFrom="xs">
+              Refresh
+            </Button>
+            <ActionIcon size="lg" variant="default" loading={refreshing} hiddenFrom="xs" aria-label="Refresh" onClick={handleManualRefresh}>
+              <IconRefresh size={18} />
             </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Log out">
-            <ActionIcon variant="subtle" onClick={onLoggedOut} aria-label="Log out">
-              <LogOut size={18} />
-            </ActionIcon>
-          </Tooltip>
+            <Button size="sm" variant="subtle" leftSection={<IconLogout size={16} />} onClick={onLoggedOut}>
+              Logout
+            </Button>
+          </Group>
         </Group>
-      </Group>
+      </AppShell.Header>
 
-      {error && (
-        <Text c="red" mb="md">
-          {error}
-        </Text>
-      )}
+      <AppShell.Main>
+        <Stack p="md" maw={860} mx="auto">
+          <Text size="xs" tt="uppercase" fw={700} c="dimmed">
+            Active Sessions
+          </Text>
 
-      {sessions === null ? (
-        <Center py="xl">
-          <Loader />
-        </Center>
-      ) : sessions.length === 0 ? (
-        <Text c="dimmed" ta="center" py="xl">
-          No active stream sessions
-        </Text>
-      ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-          {sessions.map((s) => (
-            <SessionCard key={s.channel_id} session={s} onChanged={refresh} />
-          ))}
-        </SimpleGrid>
-      )}
-    </Container>
+          {error && (
+            <Text c="red" size="sm">
+              {error}
+            </Text>
+          )}
+
+          {sessions === null ? (
+            <Center py="xl">
+              <Loader />
+            </Center>
+          ) : sessions.length === 0 ? (
+            <Text c="dimmed" ta="center" py="xl">
+              No active stream sessions
+            </Text>
+          ) : (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+              {sessions.map((s) => (
+                <SessionCard key={s.channel_id} session={s} onChanged={refresh} />
+              ))}
+            </SimpleGrid>
+          )}
+        </Stack>
+      </AppShell.Main>
+    </AppShell>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, Group, Text, Badge, Select, Accordion, Stack, ActionIcon, Tooltip, Loader, Center } from '@mantine/core';
-import { UserX } from 'lucide-react';
+import { IconUserOff } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { channelStreams, switchSource, disconnectClient, sessionDetail } from '../api.js';
 
@@ -172,7 +172,7 @@ export default function SessionCard({ session, onChanged }) {
                     </div>
                     <Tooltip label="Disconnect">
                       <ActionIcon color="red" variant="subtle" onClick={() => handleDisconnect(c.client_id)}>
-                        <UserX size={16} />
+                        <IconUserOff size={16} />
                       </ActionIcon>
                     </Tooltip>
                   </Group>

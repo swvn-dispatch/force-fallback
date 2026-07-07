@@ -238,6 +238,8 @@ export default function SessionCard({ session, onChanged }) {
     label: s.provider ? `${s.name} [${s.provider}]` : s.name,
     name: s.name,
     provider: s.provider,
+    streamProfile: s.stream_profile,
+    m3uProfile: s.m3u_profile,
     stats: s.stats,
   }));
 
@@ -271,6 +273,49 @@ export default function SessionCard({ session, onChanged }) {
         </Group>
       </Group>
 
+      <Select
+        label="Source"
+        placeholder={streams === null ? 'Loading…' : 'Select a source'}
+        data={streamOptions}
+        value={currentStreamId}
+        onChange={handleSwitch}
+        disabled={switching || streams === null}
+        mb="sm"
+        maxDropdownHeight={320}
+        renderOption={({ option, checked }) => (
+          <Stack gap={2} py={2} style={{ width: '100%' }}>
+            <Group justify="space-between" wrap="nowrap" gap="xs">
+              <Text size="sm" truncate>
+                {option.name}
+              </Text>
+              {checked && <IconCheck size={14} style={{ flexShrink: 0 }} />}
+            </Group>
+            {option.provider && (
+              <Text size="xs" c="dimmed" truncate>
+                {option.provider}
+              </Text>
+            )}
+            {option.streamProfile && (
+              <Group gap={4} wrap="nowrap">
+                <IconVideo size={12} />
+                <Text size="xs" c="dimmed" truncate>
+                  {option.streamProfile}
+                </Text>
+              </Group>
+            )}
+            {option.m3uProfile && (
+              <Group gap={4} wrap="nowrap">
+                <IconCloudUpload size={12} />
+                <Text size="xs" c="dimmed" truncate>
+                  {option.m3uProfile}
+                </Text>
+              </Group>
+            )}
+            {option.stats && <StreamStatsBadges stats={option.stats} size="xs" />}
+          </Stack>
+        )}
+      />
+
       {isMobile ? (
         <Accordion
           value={statsExpanded}
@@ -288,34 +333,6 @@ export default function SessionCard({ session, onChanged }) {
       ) : (
         <SessionStatsBlock session={session} speed={speed} />
       )}
-
-      <Select
-        label="Source"
-        placeholder={streams === null ? 'Loading…' : 'Select a source'}
-        data={streamOptions}
-        value={currentStreamId}
-        onChange={handleSwitch}
-        disabled={switching || streams === null}
-        searchable
-        mb="sm"
-        maxDropdownHeight={320}
-        renderOption={({ option, checked }) => (
-          <Stack gap={2} py={2} style={{ width: '100%' }}>
-            <Group justify="space-between" wrap="nowrap" gap="xs">
-              <Text size="sm" truncate>
-                {option.name}
-              </Text>
-              {checked && <IconCheck size={14} style={{ flexShrink: 0 }} />}
-            </Group>
-            {option.provider && (
-              <Text size="xs" c="dimmed" truncate>
-                {option.provider}
-              </Text>
-            )}
-            {option.stats && <StreamStatsBadges stats={option.stats} size="xs" />}
-          </Stack>
-        )}
-      />
 
       <Accordion
         value={expanded}

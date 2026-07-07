@@ -39,7 +39,12 @@ export default function SessionsList({ onLoggedOut }) {
     <AppShell header={{ height: 56 }}>
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Image src={logoUrl} h={32} w="auto" style={{ flexShrink: 0 }} />
+          <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
+            <Image src={logoUrl} h={32} w="auto" />
+            <Text size="xs" c="dimmed">
+              v{__APP_VERSION__}
+            </Text>
+          </Group>
           <Group gap="xs" wrap="nowrap">
             <Button size="sm" leftSection={<IconRefresh size={16} />} loading={refreshing} onClick={handleManualRefresh} visibleFrom="xs">
               Refresh
@@ -75,7 +80,7 @@ export default function SessionsList({ onLoggedOut }) {
               No active stream sessions
             </Text>
           ) : (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
               {sessions.map((s) => (
                 <SessionCard key={s.channel_id} session={s} onChanged={refresh} />
               ))}

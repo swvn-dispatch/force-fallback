@@ -134,6 +134,8 @@ class ForceFallbackServer:
 
         if sub_path == "/api/auth/token":
             return api.handle_auth_token(environ, start_response)
+        if sub_path == "/api/auth/refresh":
+            return api.handle_auth_refresh(environ, start_response)
         if sub_path == "/api/sessions":
             return api.handle_sessions_list(environ, start_response)
 

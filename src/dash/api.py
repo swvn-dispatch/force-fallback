@@ -211,6 +211,24 @@ def handle_client_disconnect(environ, start_response, channel_uuid, client_id):
         return _json_error(start_response, "500 Internal Server Error", str(e))
 
 
+def handle_channel_stop(environ, start_response, channel_uuid):
+    if environ.get("REQUEST_METHOD") == "OPTIONS":
+        return cors_preflight(start_response)
+    if not _verify_token(environ):
+        return _json_error(start_response, "401 Unauthorized", "Authentication required")
+    if environ.get("REQUEST_METHOD") != "POST":
+        return _json_error(start_response, "405 Method Not Allowed", "POST only")
+
+    try:
+        result = _sessions().stop_channel(channel_uuid)
+        if result.get("status") == "error":
+            return _json_error(start_response, "404 Not Found", result.get("message", "Stop failed"))
+        return _json_ok(start_response, result)
+    except Exception as e:
+        logger.error(f"Channel stop failed: {e}", exc_info=True)
+        return _json_error(start_response, "500 Internal Server Error", str(e))
+
+
 # ------------------------------------------------------------------
 # Static file serving (configurable mount path)
 # ------------------------------------------------------------------

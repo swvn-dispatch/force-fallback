@@ -22,6 +22,70 @@ def _channel_display(channel_uuid: str) -> dict:
     return {}
 
 
+def _stream_profile_name(stream_profile_id) -> "str | None":
+    if not stream_profile_id:
+        return None
+    try:
+        from core.models import StreamProfile
+        return StreamProfile.objects.filter(id=int(stream_profile_id)).values_list("name", flat=True).first()
+    except Exception:
+        return None
+
+
+def _m3u_profile_name(m3u_profile_id) -> "str | None":
+    if not m3u_profile_id:
+        return None
+    try:
+        from apps.m3u.models import M3UAccountProfile
+        return M3UAccountProfile.objects.filter(id=int(m3u_profile_id)).values_list("name", flat=True).first()
+    except Exception:
+        return None
+
+
+def _provider_name(stream_id) -> "str | None":
+    """M3U account ("provider") name that owns the given stream."""
+    if not stream_id:
+        return None
+    try:
+        from apps.channels.models import Stream
+        stream = Stream.objects.filter(id=int(stream_id)).select_related("m3u_account").first()
+        if stream and stream.m3u_account:
+            return stream.m3u_account.name
+    except Exception:
+        pass
+    return None
+
+
+def _username(user_id) -> str:
+    """Resolve a client's Dispatcharr user_id to a username, or 'Anonymous'."""
+    if not user_id or str(user_id) == "0":
+        return "Anonymous"
+    try:
+        from apps.accounts.models import User
+        username = User.objects.filter(id=int(user_id)).values_list("username", flat=True).first()
+        return username or f"User {user_id}"
+    except Exception:
+        return f"User {user_id}"
+
+
+def _enrich_clients(clients: list) -> list:
+    for c in clients:
+        c["username"] = _username(c.get("user_id"))
+    return clients
+
+
+def _enrich(info: dict) -> dict:
+    """Add stream_profile_name / m3u_profile_name / provider / client usernames."""
+    if info.get("stream_profile") and not info.get("stream_profile_name"):
+        info["stream_profile_name"] = _stream_profile_name(info.get("stream_profile"))
+    if info.get("m3u_profile_id") and not info.get("m3u_profile_name"):
+        info["m3u_profile_name"] = _m3u_profile_name(info.get("m3u_profile_id"))
+    info["provider"] = _provider_name(info.get("stream_id"))
+    if info.get("clients"):
+        _enrich_clients(info["clients"])
+    return info
+
+
 def list_sessions() -> list:
     """Basic info for every currently-active channel session."""
     from apps.proxy.live_proxy.server import ProxyServer
@@ -46,7 +110,7 @@ def list_sessions() -> list:
                 continue
             if not info.get("channel_name"):
                 info.update(_channel_display(channel_uuid))
-            sessions.append(info)
+            sessions.append(_enrich(info))
         if cursor == 0:
             break
     return sessions
@@ -57,9 +121,11 @@ def session_detail(channel_uuid: str):
     from apps.proxy.live_proxy.channel_status import ChannelStatus
 
     info = ChannelStatus.get_detailed_channel_info(channel_uuid)
-    if info and not info.get("channel_name"):
+    if info is None:
+        return None
+    if not info.get("channel_name"):
         info.update(_channel_display(channel_uuid))
-    return info
+    return _enrich(info)
 
 
 def channel_streams(channel_uuid: str) -> dict:
@@ -72,8 +138,16 @@ def channel_streams(channel_uuid: str) -> dict:
         return {"error": "Channel not found"}
 
     streams = [
-        {"id": s.id, "name": s.name}
-        for s in channel.streams.all().order_by("channelstream__order")
+        {
+            "id": s.id,
+            "name": s.name,
+            "provider": s.m3u_account.name if s.m3u_account else None,
+            # Last-known technical stats for this specific stream (video/audio
+            # codec, resolution, fps, etc), captured the last time it was
+            # actually played. None if it's never been used.
+            "stats": s.stream_stats or None,
+        }
+        for s in channel.streams.select_related("m3u_account").order_by("channelstream__order")
     ]
 
     current_stream_id = None
@@ -95,3 +169,10 @@ def disconnect_client(channel_uuid: str, client_id: str) -> dict:
     from apps.proxy.live_proxy.services.channel_service import ChannelService
 
     return ChannelService.stop_client(channel_uuid, client_id)
+
+
+def stop_channel(channel_uuid: str) -> dict:
+    """Stop the whole stream/channel, disconnecting all clients."""
+    from apps.proxy.live_proxy.services.channel_service import ChannelService
+
+    return ChannelService.stop_channel(channel_uuid)

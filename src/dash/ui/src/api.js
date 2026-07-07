@@ -80,3 +80,9 @@ export function disconnectClient(channelId, clientId) {
     method: 'POST',
   });
 }
+
+export function stopChannel(channelId) {
+  return request(`/channels/${channelId}/stop`, {
+    method: 'POST',
+  });
+}

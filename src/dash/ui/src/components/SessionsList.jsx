@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppShell, Group, Image, Button, ActionIcon, Stack, Text, SimpleGrid, Center, Loader } from '@mantine/core';
-import { IconRefresh, IconLogout } from '@tabler/icons-react';
+import { IconRefresh } from '@tabler/icons-react';
 import logoUrl from '/logo.png';
 import { listSessions } from '../api.js';
 import SessionCard from './SessionCard.jsx';
@@ -55,7 +55,7 @@ export default function SessionsList({ onLoggedOut }) {
             <ActionIcon size="lg" variant="default" loading={refreshing} hiddenFrom="xs" aria-label="Refresh" onClick={handleManualRefresh}>
               <IconRefresh size={18} />
             </ActionIcon>
-            <Button size="sm" variant="subtle" leftSection={<IconLogout size={16} />} onClick={onLoggedOut}>
+            <Button size="sm" variant="subtle" onClick={onLoggedOut}>
               Logout
             </Button>
           </Group>

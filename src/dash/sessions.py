@@ -176,3 +176,22 @@ def stop_channel(channel_uuid: str) -> dict:
     from apps.proxy.live_proxy.services.channel_service import ChannelService
 
     return ChannelService.stop_channel(channel_uuid)
+
+
+def channel_logo_info(channel_uuid: str):
+    """Return ('redirect', url) | ('file', path) | (None, None) for a channel's logo.
+
+    Mirrors Dispatcharr's own LogoViewSet.cache action: local files (paths
+    starting with /data) are streamed by our own server, remote URLs are just
+    redirected to directly since <img> tags aren't subject to CORS.
+    """
+    from apps.channels.models import Channel
+
+    channel = Channel.objects.filter(uuid=channel_uuid).select_related("logo").first()
+    if not channel or not channel.logo or not channel.logo.url:
+        return None, None
+
+    url = channel.logo.url
+    if url.startswith("/data"):
+        return "file", url
+    return "redirect", url

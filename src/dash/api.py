@@ -229,6 +229,43 @@ def handle_channel_stop(environ, start_response, channel_uuid):
         return _json_error(start_response, "500 Internal Server Error", str(e))
 
 
+def handle_channel_logo(environ, start_response, channel_uuid):
+    # No JWT check: <img> tags can't send an Authorization header, and logos
+    # aren't sensitive (Dispatcharr's own logo-cache endpoint is AllowAny too).
+    if environ.get("REQUEST_METHOD") == "OPTIONS":
+        return cors_preflight(start_response)
+    if environ.get("REQUEST_METHOD") != "GET":
+        return _json_error(start_response, "405 Method Not Allowed", "GET only")
+
+    try:
+        kind, value = _sessions().channel_logo_info(channel_uuid)
+    except Exception as e:
+        logger.error(f"Logo lookup failed: {e}", exc_info=True)
+        kind, value = None, None
+
+    if kind == "redirect":
+        start_response("302 Found", [("Location", value)] + _CORS_HEADERS)
+        return [b""]
+
+    if kind == "file":
+        if not os.path.isfile(value):
+            start_response("404 Not Found", [("Content-Type", "text/plain")])
+            return [b"Not Found\n"]
+        mime, _ = mimetypes.guess_type(value)
+        mime = mime or "image/jpeg"
+        with open(value, "rb") as f:
+            data = f.read()
+        start_response("200 OK", [
+            ("Content-Type", mime),
+            ("Content-Length", str(len(data))),
+            ("Cache-Control", "public, max-age=14400"),
+        ] + _CORS_HEADERS)
+        return [data]
+
+    start_response("404 Not Found", [("Content-Type", "text/plain")])
+    return [b"Not Found\n"]
+
+
 # ------------------------------------------------------------------
 # Static file serving (configurable mount path)
 # ------------------------------------------------------------------

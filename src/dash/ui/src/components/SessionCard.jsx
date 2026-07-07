@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Card, Group, Text, Badge, Select, Accordion, Stack, ActionIcon, Tooltip, Loader, Center } from '@mantine/core';
+import { Card, Group, Text, Badge, Select, Accordion, Stack, ActionIcon, Tooltip, Loader, Center, Image } from '@mantine/core';
 import { IconUserOff, IconSquareX, IconVideo, IconCloudUpload, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { channelStreams, switchSource, disconnectClient, stopChannel, sessionDetail } from '../api.js';
+import { channelStreams, switchSource, disconnectClient, stopChannel, sessionDetail, channelLogoUrl } from '../api.js';
 import ConfirmModal from './ConfirmModal.jsx';
 
 function formatUptime(seconds) {
@@ -241,9 +241,23 @@ export default function SessionCard({ session, onChanged }) {
   return (
     <Card withBorder radius="md" padding="md">
       <Group justify="space-between" mb="xs" wrap="nowrap">
-        <Text fw={600} truncate>
-          {name}
-        </Text>
+        <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
+          <Image
+            src={channelLogoUrl(session.channel_id)}
+            alt=""
+            h={28}
+            w={28}
+            fit="contain"
+            radius="sm"
+            style={{ flexShrink: 0 }}
+            onError={(e) => {
+              e.currentTarget.style.visibility = 'hidden';
+            }}
+          />
+          <Text fw={600} truncate>
+            {name}
+          </Text>
+        </Group>
         <Group gap={6} wrap="nowrap">
           <Badge color={stateColor} variant="light">
             {session.state || 'unknown'}

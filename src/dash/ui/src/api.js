@@ -86,3 +86,7 @@ export function stopChannel(channelId) {
     method: 'POST',
   });
 }
+
+export function channelLogoUrl(channelId) {
+  return `${BASE}api/channels/${channelId}/logo`;
+}

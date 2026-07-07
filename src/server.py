@@ -154,6 +154,10 @@ class ForceFallbackServer:
         if m:
             return api.handle_channel_stop(environ, start_response, m.group(1))
 
+        m = re.match(r"^/api/channels/([^/]+)/logo$", sub_path)
+        if m:
+            return api.handle_channel_logo(environ, start_response, m.group(1))
+
         m = re.match(r"^/api/channels/([^/]+)/clients/([^/]+)/disconnect$", sub_path)
         if m:
             return api.handle_client_disconnect(environ, start_response, m.group(1), m.group(2))

@@ -13,6 +13,11 @@ export default defineConfig({
   // Relative base so the build works when the Python server mounts it under
   // any runtime-configured dash_path, not just a fixed prefix baked in here.
   base: './',
+  // Forces a single React/Mantine instance even when @swvn-dispatch/dispatch-ui-kit
+  // is npm-linked from a local checkout (which has its own copies for its own build).
+  resolve: {
+    dedupe: ['react', 'react-dom', '@mantine/core', '@mantine/hooks', '@mantine/notifications'],
+  },
   define: { __APP_VERSION__: JSON.stringify(pluginVersion) },
   build: { outDir: '../static', emptyOutDir: true },
   server: {

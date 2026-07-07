@@ -43,7 +43,9 @@ export default function SessionsList({ onLoggedOut }) {
     <AppShell header={{ height: 56 }}>
       <AppHeader
         logoUrl={logoUrl}
+        appName="Force Fallback"
         version={__APP_VERSION__}
+        githubUrl="https://github.com/swvn-dispatch/force-fallback"
         onLogout={onLoggedOut}
         actions={[
           { key: 'refresh', label: 'Refresh', icon: IconRefresh, onClick: handleManualRefresh, loading: refreshing },

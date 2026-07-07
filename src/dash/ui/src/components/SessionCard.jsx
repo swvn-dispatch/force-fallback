@@ -118,27 +118,27 @@ function SessionStatsBlock({ session, speed }) {
           <Text size="sm">{session.client_count ?? 0}</Text>
         </Group>
         {session.stream_profile_name && (
-          <Group gap="xs" justify="space-between">
-            <Group gap={4}>
+          <Group gap="xs" justify="space-between" wrap="nowrap">
+            <Group gap={4} wrap="nowrap" style={{ flexShrink: 0 }}>
               <IconVideo size={14} />
               <Text size="sm" c="dimmed">
                 Stream Profile
               </Text>
             </Group>
-            <Text size="sm" truncate maw={160}>
+            <Text size="sm" truncate style={{ minWidth: 0, flex: 1 }} ta="right">
               {session.stream_profile_name}
             </Text>
           </Group>
         )}
         {session.m3u_profile_name && (
-          <Group gap="xs" justify="space-between">
-            <Group gap={4}>
+          <Group gap="xs" justify="space-between" wrap="nowrap">
+            <Group gap={4} wrap="nowrap" style={{ flexShrink: 0 }}>
               <IconCloudUpload size={14} />
               <Text size="sm" c="dimmed">
                 M3U Profile
               </Text>
             </Group>
-            <Text size="sm" truncate maw={160}>
+            <Text size="sm" truncate style={{ minWidth: 0, flex: 1 }} ta="right">
               {session.m3u_profile_name}
             </Text>
           </Group>

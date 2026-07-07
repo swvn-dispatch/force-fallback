@@ -1,0 +1,12 @@
+{
+  "name": "Force Fallback",
+  "license": "MIT",
+  "description": "Mobile-friendly dashboard to view live Dispatcharr stream sessions, connected clients, and swap sources on the fly",
+  "author": "sethwv",
+
+  "version": "0.1.0",
+  "min_dispatcharr_version": "v0.27.0",
+
+  "repo_url": "https://github.com/swvn-dispatch/force-fallback",
+  "help_url": "https://github.com/swvn-dispatch/force-fallback"
+}

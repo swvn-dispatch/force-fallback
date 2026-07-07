@@ -21,14 +21,14 @@ _GLOBAL_SETTINGS_FIELDS = [
         "id": "dash_enabled",
         "label": "Web Dashboard",
         "type": "select",
-        "default": "disabled",
+        "default": "enabled",
         "options": [
             {"value": "disabled", "label": "Disabled"},
             {"value": "enabled", "label": "Enabled"},
         ],
         "description": (
             "Serves a mobile-friendly PWA dashboard for viewing live stream "
-            "sessions, connected clients, and swapping sources. Off by "
+            "sessions, connected clients, and swapping sources. On by "
             "default. You may need to expose the configured port in your "
             "docker-compose.yml to reach it from outside the container. "
             "After changing this or the port, use the 'Restart Dashboard "

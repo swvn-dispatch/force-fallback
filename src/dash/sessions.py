@@ -128,16 +128,6 @@ def session_detail(channel_uuid: str):
     return _enrich(info)
 
 
-def _default_m3u_profile_name(m3u_account) -> "str | None":
-    if not m3u_account:
-        return None
-    try:
-        profile = m3u_account.profiles.filter(is_default=True).first()
-        return profile.name if profile else None
-    except Exception:
-        return None
-
-
 def channel_streams(channel_uuid: str) -> dict:
     """Configured source list for a channel, plus which one is currently active."""
     from apps.channels.models import Channel
@@ -147,28 +137,18 @@ def channel_streams(channel_uuid: str) -> dict:
     if not channel:
         return {"error": "Channel not found"}
 
-    streams = []
-    for s in channel.streams.select_related("m3u_account", "stream_profile").order_by("channelstream__order"):
-        try:
-            stream_profile_name = s.get_stream_profile().name
-        except Exception:
-            stream_profile_name = None
-        streams.append({
+    streams = [
+        {
             "id": s.id,
             "name": s.name,
             "provider": s.m3u_account.name if s.m3u_account else None,
-            # The stream's own profile override if set, otherwise whatever
-            # get_stream_profile() falls back to (system default).
-            "stream_profile": stream_profile_name,
-            # Best-effort: the default profile on that stream's M3U account.
-            # The profile actually used at switch time is chosen dynamically
-            # based on availability, so this is an indicator, not a guarantee.
-            "m3u_profile": _default_m3u_profile_name(s.m3u_account),
             # Last-known technical stats for this specific stream (video/audio
             # codec, resolution, fps, etc), captured the last time it was
             # actually played. None if it's never been used.
             "stats": s.stream_stats or None,
-        })
+        }
+        for s in channel.streams.select_related("m3u_account").order_by("channelstream__order")
+    ]
 
     current_stream_id = None
     info = ChannelStatus.get_basic_channel_info(channel_uuid)

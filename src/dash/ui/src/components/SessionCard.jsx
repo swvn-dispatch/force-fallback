@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Card, Group, Text, Badge, Select, Accordion, Stack, ActionIcon, Tooltip, Loader, Center } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
 import { IconUserOff, IconSquareX, IconVideo, IconCloudUpload, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { channelStreams, switchSource, disconnectClient, stopChannel, sessionDetail } from '../api.js';
@@ -152,7 +151,6 @@ function SessionStatsBlock({ session, speed }) {
 }
 
 export default function SessionCard({ session, onChanged }) {
-  const isMobile = useMediaQuery('(max-width: 48em)');
   const [streams, setStreams] = useState(null);
   const [currentStreamId, setCurrentStreamId] = useState(
     session.stream_id != null ? String(session.stream_id) : null,
@@ -161,7 +159,6 @@ export default function SessionCard({ session, onChanged }) {
   const [clients, setClients] = useState(session.clients || []);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);
-  const [statsExpanded, setStatsExpanded] = useState(null);
   const [confirm, setConfirm] = useState(null);
 
   useEffect(() => {
@@ -238,8 +235,6 @@ export default function SessionCard({ session, onChanged }) {
     label: s.provider ? `${s.name} [${s.provider}]` : s.name,
     name: s.name,
     provider: s.provider,
-    streamProfile: s.stream_profile,
-    m3uProfile: s.m3u_profile,
     stats: s.stats,
   }));
 
@@ -295,44 +290,12 @@ export default function SessionCard({ session, onChanged }) {
                 {option.provider}
               </Text>
             )}
-            {option.streamProfile && (
-              <Group gap={4} wrap="nowrap">
-                <IconVideo size={12} />
-                <Text size="xs" c="dimmed" truncate>
-                  {option.streamProfile}
-                </Text>
-              </Group>
-            )}
-            {option.m3uProfile && (
-              <Group gap={4} wrap="nowrap">
-                <IconCloudUpload size={12} />
-                <Text size="xs" c="dimmed" truncate>
-                  {option.m3uProfile}
-                </Text>
-              </Group>
-            )}
             {option.stats && <StreamStatsBadges stats={option.stats} size="xs" />}
           </Stack>
         )}
       />
 
-      {isMobile ? (
-        <Accordion
-          value={statsExpanded}
-          onChange={setStatsExpanded}
-          styles={{ item: { borderBottom: 'none' } }}
-          mb="xs"
-        >
-          <Accordion.Item value="stats">
-            <Accordion.Control>Stats</Accordion.Control>
-            <Accordion.Panel>
-              <SessionStatsBlock session={session} speed={speed} />
-            </Accordion.Panel>
-          </Accordion.Item>
-        </Accordion>
-      ) : (
-        <SessionStatsBlock session={session} speed={speed} />
-      )}
+      <SessionStatsBlock session={session} speed={speed} />
 
       <Accordion
         value={expanded}

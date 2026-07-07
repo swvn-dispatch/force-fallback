@@ -15,7 +15,10 @@ export default function SessionsList({ onLoggedOut }) {
   const refresh = useCallback(async () => {
     try {
       const data = await listSessions();
-      setSessions(data.sessions);
+      const sorted = [...data.sessions].sort(
+        (a, b) => (a.started_at ?? Infinity) - (b.started_at ?? Infinity),
+      );
+      setSessions(sorted);
       setError(null);
     } catch (err) {
       setError(err.message);

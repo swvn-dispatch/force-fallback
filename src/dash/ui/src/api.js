@@ -1,6 +1,6 @@
 import { createApiClient } from '@swvn-dispatch/dispatch-ui-kit';
 
-const client = createApiClient({ tokenKey: 'ff_access_token' });
+const client = createApiClient({ tokenKey: 'ss_access_token' });
 
 export const login = client.login;
 export const logout = client.logout;

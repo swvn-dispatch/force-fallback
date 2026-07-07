@@ -1,6 +1,6 @@
 {
-  "name": "Force Fallback",
-  "short_name": "Force Fallback",
+  "name": "Source Switch",
+  "short_name": "Source Switch",
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#1971c2",

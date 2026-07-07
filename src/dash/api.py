@@ -8,7 +8,9 @@ import os
 logger = logging.getLogger(__name__)
 
 _STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-_PLUGIN_KEY = "force_fallback"
+# Duplicated from __init__.py's PLUGIN_DB_KEY (see server.py's _settings() for
+# why this file-path-loaded module can't just import it directly).
+_PLUGIN_KEY = "source_switch"
 
 _CORS_HEADERS = [
     ("Access-Control-Allow-Origin", "*"),

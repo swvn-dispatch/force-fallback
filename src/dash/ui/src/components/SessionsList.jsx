@@ -43,9 +43,9 @@ export default function SessionsList({ onLoggedOut }) {
     <AppShell header={{ height: 56 }}>
       <AppHeader
         logoUrl={logoUrl}
-        appName="Force Fallback"
+        appName="Source Switch"
         version={__APP_VERSION__}
-        githubUrl="https://github.com/swvn-dispatch/force-fallback"
+        githubUrl="https://github.com/swvn-dispatch/source-switch"
         username={getUsername()}
         onLogout={onLoggedOut}
         actions={[

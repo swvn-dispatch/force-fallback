@@ -1,9 +1,14 @@
-"""Dispatcharr Force Fallback plugin.
+"""Dispatcharr Source Switch plugin.
 
 Mobile-friendly Mantine PWA dashboard showing all running stream sessions,
 their live stats, connected clients (with disconnect), and a source-swap
 dropdown -- a plugin-ified, mobile-friendly slice of Dispatcharr's own Stats
 page.
+
+Formerly published as "Force Fallback" (settings key `force_fallback`);
+renamed because the plugin doesn't do automatic failover, it's a dashboard
+for manually switching a channel's source. See _migrate_legacy_settings
+below for how existing installs' saved settings carry over.
 """
 
 import json
@@ -18,7 +23,8 @@ _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(_PLUGIN_DIR, "plugin.json")) as _f:
     _PLUGIN_CONFIG = json.load(_f)
 
-PLUGIN_DB_KEY = "force_fallback"
+PLUGIN_DB_KEY = "source_switch"
+_LEGACY_PLUGIN_DB_KEY = "force_fallback"
 
 
 def _load_submodule(name: str):
@@ -72,8 +78,41 @@ def _get_settings() -> dict:
         return {}
 
 
+def _migrate_legacy_settings():
+    """One-time carry-over of settings saved under the old "force_fallback"
+    key (from before the Source Switch rename) onto the new PLUGIN_DB_KEY row.
+
+    Dispatcharr derives a plugin's settings key from the installed zip's
+    folder name, so this rename makes Dispatcharr treat the new build as a
+    separate plugin install rather than an upgrade -- this only rescues the
+    *data* (dash port/path/enabled), it can't merge the two plugin list
+    entries. Idempotent via a sentinel written into the copied settings dict,
+    so it only ever overwrites once and never clobbers subsequent edits made
+    under the new key.
+    """
+    try:
+        from apps.plugins.models import PluginConfig
+        old_cfg = PluginConfig.objects.filter(key=_LEGACY_PLUGIN_DB_KEY).first()
+        if not old_cfg or not old_cfg.settings:
+            return
+        new_cfg = PluginConfig.objects.filter(key=PLUGIN_DB_KEY).first()
+        if new_cfg and new_cfg.settings.get("_migrated_from_force_fallback"):
+            return
+        migrated = dict(old_cfg.settings)
+        migrated["_migrated_from_force_fallback"] = True
+        if new_cfg:
+            new_cfg.settings = migrated
+            new_cfg.enabled = old_cfg.enabled
+            new_cfg.save(update_fields=["settings", "enabled"])
+        else:
+            PluginConfig.objects.create(key=PLUGIN_DB_KEY, settings=migrated, enabled=old_cfg.enabled)
+        logger.info("Source Switch: migrated settings from the legacy 'Force Fallback' plugin key")
+    except Exception as e:
+        logger.warning(f"Source Switch: legacy settings migration skipped: {e}")
+
+
 class Plugin:
-    """Dispatcharr Plugin: Force Fallback stream dashboard."""
+    """Dispatcharr Plugin: Source Switch stream dashboard."""
 
     name        = _PLUGIN_CONFIG["name"]
     description = _PLUGIN_CONFIG["description"]
@@ -95,9 +134,10 @@ class Plugin:
 
     def __init__(self):
         try:
+            _migrate_legacy_settings()
             self._autostart()
         except Exception as e:
-            logger.warning(f"Force Fallback dashboard auto-start skipped: {e}")
+            logger.warning(f"Source Switch dashboard auto-start skipped: {e}")
         finally:
             _close_db_connections()
 
@@ -111,9 +151,9 @@ class Plugin:
             return
         result = self._start_server(settings)
         if result.get("status") == "success":
-            logger.info(f"Force Fallback auto-start: {result['message']}")
+            logger.info(f"Source Switch auto-start: {result['message']}")
         else:
-            logger.warning(f"Force Fallback auto-start failed: {result['message']}")
+            logger.warning(f"Source Switch auto-start failed: {result['message']}")
 
     # Dynamic fields
 
@@ -141,11 +181,11 @@ class Plugin:
         if existing and existing.is_running():
             existing.stop()
 
-        server = srv.ForceFallbackServer(host="0.0.0.0", port=port)
+        server = srv.SourceSwitchServer(host="0.0.0.0", port=port)
         if server.start():
             return {
                 "status": "success",
-                "message": f"Force Fallback dashboard server started on http://0.0.0.0:{port}/",
+                "message": f"Source Switch dashboard server started on http://0.0.0.0:{port}/",
             }
         return {
             "status": "error",
@@ -171,5 +211,5 @@ class Plugin:
         srv = _server()
         server = srv.get_server()
         if server and server.is_running():
-            logger.info("Plugin stopping, shutting down Force Fallback dashboard server")
+            logger.info("Plugin stopping, shutting down Source Switch dashboard server")
             server.stop()

@@ -49,7 +49,7 @@ body:
     id: logs
     attributes:
       label: Relevant logs
-      description: Paste any Dispatcharr server logs (grep for "Force Fallback") here.
+      description: Paste any Dispatcharr server logs (grep for "Source Switch") here.
       render: shell
     validations:
       required: false

@@ -1,4 +1,4 @@
-"""Force Fallback dashboard server.
+"""Source Switch dashboard server.
 
 Embeds a gevent WSGI server (own port) inside the Dispatcharr plugin process,
 since Dispatcharr's plugin system has no route/static-serving hook of its own.
@@ -53,9 +53,14 @@ def set_server(s):
 
 
 def _settings() -> dict:
+    # Duplicates __init__.py's PLUGIN_DB_KEY as a literal rather than importing
+    # it -- this module is loaded via the manual spec_from_file_location path
+    # loader (see _load_dash_api's docstring below), where normal package-
+    # relative imports aren't reliable. Keep this in sync with __init__.py by
+    # hand if it ever changes again.
     try:
         from apps.plugins.models import PluginConfig
-        return PluginConfig.objects.get(key="force_fallback").settings
+        return PluginConfig.objects.get(key="source_switch").settings
     except Exception:
         return {}
 
@@ -69,7 +74,7 @@ def _normalized_dash_path() -> str:
     return raw  # "" means mounted at server root
 
 
-class ForceFallbackServer:
+class SourceSwitchServer:
     def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
@@ -171,7 +176,7 @@ class ForceFallbackServer:
 
     def start(self) -> bool:
         if self.running:
-            logger.warning("Force Fallback server is already running")
+            logger.warning("Source Switch server is already running")
             return False
 
         try:
@@ -180,14 +185,14 @@ class ForceFallbackServer:
             sock.bind((self.host, self.port))
             sock.close()
         except OSError as e:
-            logger.info(f"Force Fallback: port {self.port} already taken, skipping ({e})")
+            logger.info(f"Source Switch: port {self.port} already taken, skipping ({e})")
             return False
 
         try:
             from gevent import pywsgi
             import gevent as _gevent
         except ImportError:
-            logger.error("gevent is not installed; cannot start Force Fallback server")
+            logger.error("gevent is not installed; cannot start Source Switch server")
             return False
 
         def _run():
@@ -202,9 +207,9 @@ class ForceFallbackServer:
                 # EADDRINUSE here means a concurrent worker won the race between
                 # our test-bind above and this re-bind -- expected on multi-worker
                 # startup, not an error.
-                logger.info(f"Force Fallback: port {self.port} taken by concurrent worker ({e})")
+                logger.info(f"Source Switch: port {self.port} taken by concurrent worker ({e})")
             except Exception as e:  # noqa: BLE001
-                logger.error(f"Force Fallback server crashed: {e}", exc_info=True)
+                logger.error(f"Source Switch server crashed: {e}", exc_info=True)
             finally:
                 self.running = False
 
@@ -219,7 +224,7 @@ class ForceFallbackServer:
                 pass
         self.running = False
         set_server(None)
-        logger.info("Force Fallback server stopped")
+        logger.info("Source Switch server stopped")
 
     def is_running(self) -> bool:
         return self.running

@@ -1,4 +1,4 @@
-"""Plugin configuration and field definitions for Force Fallback."""
+"""Plugin configuration and field definitions for Source Switch."""
 
 import json
 import os

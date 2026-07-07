@@ -11,7 +11,7 @@ export default function App() {
     return (
       <LoginScreen
         logoUrl={logoUrl}
-        appName="Force Fallback"
+        appName="Source Switch"
         description="Sign in with your Dispatcharr credentials to view live sessions and swap sources."
         onLogin={login}
         onLoggedIn={() => setAuthed(true)}

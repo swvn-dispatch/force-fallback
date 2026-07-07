@@ -3,7 +3,7 @@ import { AppShell, Stack, Text, SimpleGrid, Center, Loader } from '@mantine/core
 import { IconRefresh } from '@tabler/icons-react';
 import { AppHeader } from '@swvn-dispatch/dispatch-ui-kit';
 import logoUrl from '/logo.png';
-import { listSessions } from '../api.js';
+import { listSessions, getUsername } from '../api.js';
 import SessionCard from './SessionCard.jsx';
 
 const POLL_MS = 5000;
@@ -46,6 +46,7 @@ export default function SessionsList({ onLoggedOut }) {
         appName="Force Fallback"
         version={__APP_VERSION__}
         githubUrl="https://github.com/swvn-dispatch/force-fallback"
+        username={getUsername()}
         onLogout={onLoggedOut}
         actions={[
           { key: 'refresh', label: 'Refresh', icon: IconRefresh, onClick: handleManualRefresh, loading: refreshing },

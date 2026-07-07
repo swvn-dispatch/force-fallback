@@ -6,7 +6,7 @@ import { ConfirmModal, resolveStatusColor } from '@swvn-dispatch/dispatch-ui-kit
 import { channelStreams, switchSource, disconnectClient, stopChannel, sessionDetail, channelLogoUrl } from '../api.js';
 
 function formatUptime(seconds) {
-  if (seconds == null) return '—';
+  if (seconds == null) return '-';
   const s = Math.floor(seconds);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -109,7 +109,7 @@ function SessionStatsBlock({ session, speed }) {
           <Text size="sm" c="dimmed">
             Bitrate
           </Text>
-          <Text size="sm">{session.avg_bitrate || '—'}</Text>
+          <Text size="sm">{session.avg_bitrate || '-'}</Text>
         </Group>
         <Group gap="xs" justify="space-between">
           <Text size="sm" c="dimmed">

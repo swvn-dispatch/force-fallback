@@ -1,60 +1,12 @@
-// window.__BASE_PATH__ is injected by the Python server into index.html at
-// request time (see dash/api.py::serve_static), reflecting the currently
-// configured dash_path. Falls back to '/' for local `npm run dev`.
-const BASE = (typeof window !== 'undefined' && window.__BASE_PATH__) || '/';
+import { createApiClient } from '@swvn-dispatch/dispatch-ui-kit';
 
-const TOKEN_KEY = 'ff_access_token';
+const client = createApiClient({ tokenKey: 'ff_access_token' });
 
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
+export const login = client.login;
+export const logout = client.logout;
+export const isAuthenticated = client.isAuthenticated;
 
-function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
-}
-
-async function request(path, options = {}) {
-  const token = getToken();
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  const res = await fetch(`${BASE}api${path}`, { ...options, headers });
-
-  if (res.status === 401) {
-    setToken(null);
-    throw new Error('Session expired, please log in again');
-  }
-  if (!res.ok) {
-    let message = `Request failed (${res.status})`;
-    try {
-      const data = await res.json();
-      message = data.error || message;
-    } catch {
-      // ignore
-    }
-    throw new Error(message);
-  }
-  if (res.status === 204) return null;
-  return res.json();
-}
-
-export async function login(username, password) {
-  const data = await request('/auth/token', {
-    method: 'POST',
-    body: JSON.stringify({ username, password }),
-  });
-  setToken(data.access);
-  return data;
-}
-
-export function logout() {
-  setToken(null);
-}
-
-export function isAuthenticated() {
-  return !!getToken();
-}
+const { request, basePath: BASE } = client;
 
 export function listSessions() {
   return request('/sessions');

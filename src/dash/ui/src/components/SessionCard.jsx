@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Card, Group, Text, Badge, Select, Accordion, Stack, ActionIcon, Tooltip, Loader, Center, Image } from '@mantine/core';
 import { IconUserOff, IconSquareX, IconVideo, IconCloudUpload, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { ConfirmModal, resolveStatusColor } from '@swvn-dispatch/dispatch-ui-kit';
 import { channelStreams, switchSource, disconnectClient, stopChannel, sessionDetail, channelLogoUrl } from '../api.js';
-import ConfirmModal from './ConfirmModal.jsx';
 
 function formatUptime(seconds) {
   if (seconds == null) return '—';
@@ -227,7 +227,7 @@ export default function SessionCard({ session, onChanged }) {
   }
 
   const name = session.channel_name || `Channel ${session.channel_id}`;
-  const stateColor = STATE_COLORS[session.state] || 'gray';
+  const stateColor = resolveStatusColor(session.state, STATE_COLORS);
   const speed = session.ffmpeg_speed != null ? parseFloat(session.ffmpeg_speed) : null;
 
   const streamOptions = (streams || []).map((s) => ({

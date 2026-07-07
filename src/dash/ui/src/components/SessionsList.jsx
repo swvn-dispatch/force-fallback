@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AppShell, Group, Image, Button, ActionIcon, Stack, Text, SimpleGrid, Center, Loader } from '@mantine/core';
+import { AppShell, Stack, Text, SimpleGrid, Center, Loader } from '@mantine/core';
 import { IconRefresh } from '@tabler/icons-react';
+import { AppHeader } from '@swvn-dispatch/dispatch-ui-kit';
 import logoUrl from '/logo.png';
 import { listSessions } from '../api.js';
 import SessionCard from './SessionCard.jsx';
@@ -40,27 +41,14 @@ export default function SessionsList({ onLoggedOut }) {
 
   return (
     <AppShell header={{ height: 56 }}>
-      <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
-            <Image src={logoUrl} h={32} w="auto" />
-            <Text size="xs" c="dimmed">
-              v{__APP_VERSION__}
-            </Text>
-          </Group>
-          <Group gap="xs" wrap="nowrap">
-            <Button size="sm" leftSection={<IconRefresh size={16} />} loading={refreshing} onClick={handleManualRefresh} visibleFrom="xs">
-              Refresh
-            </Button>
-            <ActionIcon size="lg" variant="default" loading={refreshing} hiddenFrom="xs" aria-label="Refresh" onClick={handleManualRefresh}>
-              <IconRefresh size={18} />
-            </ActionIcon>
-            <Button size="sm" variant="subtle" onClick={onLoggedOut}>
-              Logout
-            </Button>
-          </Group>
-        </Group>
-      </AppShell.Header>
+      <AppHeader
+        logoUrl={logoUrl}
+        version={__APP_VERSION__}
+        onLogout={onLoggedOut}
+        actions={[
+          { key: 'refresh', label: 'Refresh', icon: IconRefresh, onClick: handleManualRefresh, loading: refreshing },
+        ]}
+      />
 
       <AppShell.Main>
         <Stack p="md" maw={860} mx="auto">

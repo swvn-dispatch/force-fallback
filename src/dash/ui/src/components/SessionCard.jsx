@@ -28,7 +28,7 @@ const STATE_COLORS = {
 // Matches Dispatcharr's own Stats page badge colors (StreamConnectionCard.jsx)
 const SPEED_OK_THRESHOLD = 1.0;
 
-function StreamStatsBadges({ stats, speed, size = 'sm', ...groupProps }) {
+export function StreamStatsBadges({ stats, speed, size = 'sm', ...groupProps }) {
   if (!stats) return null;
   const hasAny =
     stats.resolution ||
@@ -284,6 +284,8 @@ export default function SessionCard({ session, onChanged }) {
 
       <Select
         label="Source"
+        name={`source-switch-stream-${session.channel_id}`}
+        autoComplete="off"
         placeholder={streams === null ? 'Loading…' : 'Select a source'}
         data={streamOptions}
         value={currentStreamId}
@@ -346,6 +348,20 @@ export default function SessionCard({ session, onChanged }) {
                       <Text size="xs" c="dimmed" truncate>
                         {c.user_agent || 'unknown'}
                       </Text>
+                      {(c.output_format || c.output_profile_name) && (
+                        <Group gap="xs" mt={2}>
+                          {c.output_format && (
+                            <Text size="xs" c="dimmed">
+                              Container: {c.output_format}
+                            </Text>
+                          )}
+                          {c.output_profile_name && (
+                            <Text size="xs" c="dimmed">
+                              Output Profile: {c.output_profile_name}
+                            </Text>
+                          )}
+                        </Group>
+                      )}
                     </div>
                     <Tooltip label="Disconnect">
                       <ActionIcon

@@ -1,7 +1,7 @@
 {
   "name": "Source Switch",
   "license": "MIT",
-  "description": "Mobile-friendly dashboard to view live Dispatcharr stream sessions, connected clients, and swap sources on the fly",
+  "description": "Mobile-friendly dashboard for live, VOD, and catch-up connections, with live source switching",
   "author": "sethwv",
 
   "version": "0.1.0",

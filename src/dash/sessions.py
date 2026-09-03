@@ -56,21 +56,55 @@ def _provider_name(stream_id) -> "str | None":
     return None
 
 
-def _username(user_id) -> str:
-    """Resolve a client's Dispatcharr user_id to a username, or 'Anonymous'."""
-    if not user_id or str(user_id) == "0":
-        return "Anonymous"
+def _enrich_clients(clients: list) -> list:
+    """Resolve the user and delivery settings for a collection of clients."""
+    user_ids = set()
+    output_profile_ids = set()
+    for c in clients:
+        user_id = c.get("user_id")
+        if user_id and str(user_id) != "0":
+            try:
+                user_ids.add(int(user_id))
+            except (TypeError, ValueError):
+                pass
+        profile_id = c.get("output_profile_id")
+        if profile_id:
+            try:
+                output_profile_ids.add(int(profile_id))
+            except (TypeError, ValueError):
+                pass
+
+    usernames = {}
+    profile_names = {}
     try:
         from apps.accounts.models import User
-        username = User.objects.filter(id=int(user_id)).values_list("username", flat=True).first()
-        return username or f"User {user_id}"
+        usernames = dict(User.objects.filter(id__in=user_ids).values_list("id", "username"))
     except Exception:
-        return f"User {user_id}"
+        pass
+    try:
+        from core.models import OutputProfile
+        profile_names = dict(
+            OutputProfile.objects.filter(id__in=output_profile_ids).values_list("id", "name")
+        )
+    except Exception:
+        pass
 
-
-def _enrich_clients(clients: list) -> list:
     for c in clients:
-        c["username"] = _username(c.get("user_id"))
+        user_id = c.get("user_id")
+        if not user_id or str(user_id) == "0":
+            c["username"] = "Anonymous"
+        else:
+            try:
+                c["username"] = usernames.get(int(user_id), f"User {user_id}")
+            except (TypeError, ValueError):
+                c["username"] = c.get("username") or "Unknown"
+
+        profile_id = c.get("output_profile_id")
+        if profile_id:
+            try:
+                c["output_profile_name"] = profile_names.get(int(profile_id))
+            except (TypeError, ValueError):
+                c["output_profile_name"] = None
     return clients
 
 
@@ -195,3 +229,77 @@ def channel_logo_info(channel_uuid: str):
     if url.startswith("/data"):
         return "file", url
     return "redirect", url
+
+
+def vod_logo_info(content_type: str, content_uuid: str):
+    """Return artwork for a VOD movie or an episode's parent series."""
+    from apps.vod.models import Episode, Movie
+
+    if content_type == "movie":
+        content = Movie.objects.filter(uuid=content_uuid).select_related("logo").first()
+        logo = content.logo if content else None
+    elif content_type == "episode":
+        content = Episode.objects.filter(uuid=content_uuid).select_related("series__logo").first()
+        logo = content.series.logo if content and content.series else None
+    else:
+        return None, None
+
+    if not logo or not logo.url:
+        return None, None
+    if logo.url.startswith("/data"):
+        return "file", logo.url
+    return "redirect", logo.url
+
+
+def media_connections() -> dict:
+    """Return active VOD and catch-up sessions using Dispatcharr's stats builders."""
+    from core.utils import RedisClient
+    from apps.proxy.vod_proxy.views import build_vod_stats_data
+    from apps.timeshift.stats import build_timeshift_stats_data
+
+    redis_client = RedisClient.get_client()
+    if not redis_client:
+        return {"vod_connections": [], "timeshift_sessions": []}
+
+    vod = build_vod_stats_data(redis_client).get("vod_connections", [])
+    catchup = build_timeshift_stats_data(redis_client).get("timeshift_sessions", [])
+    for content in vod:
+        _enrich_clients(content.get("connections", []))
+    for session in catchup:
+        _enrich_clients(session.get("connections", []))
+    return {"vod_connections": vod, "timeshift_sessions": catchup}
+
+
+def stop_vod_client(client_id: str) -> dict:
+    """Mirror Dispatcharr's VOD stop endpoint without constructing a request."""
+    from core.utils import RedisClient
+    from apps.proxy.vod_proxy.multi_worker_connection_manager import get_vod_client_stop_key
+
+    redis_client = RedisClient.get_client()
+    if not redis_client:
+        return {"status": "error", "message": "Redis unavailable"}
+    if not redis_client.exists(f"vod_persistent_connection:{client_id}"):
+        return {"status": "error", "message": "Connection not found"}
+    redis_client.setex(get_vod_client_stop_key(client_id), 60, "true")
+    return {"status": "success", "client_id": client_id}
+
+
+def stop_catchup_session(session_id: str) -> dict:
+    """Stop a catch-up viewer with Dispatcharr's complete cleanup path."""
+    from core.utils import RedisClient
+    from apps.proxy.utils import stop_timeshift_client
+    from apps.timeshift.stats import find_stats_channel_for_session
+
+    redis_client = RedisClient.get_client()
+    if not redis_client:
+        return {"status": "error", "message": "Redis unavailable"}
+    stats_channel_id = find_stats_channel_for_session(redis_client, session_id)
+    if not stats_channel_id:
+        return {"status": "error", "message": "Connection not found"}
+    return stop_timeshift_client(redis_client, stats_channel_id, session_id)
+
+
+def catchup_programmes(sessions: list) -> list:
+    from apps.timeshift.helpers import get_catchup_programmes_for_sessions
+
+    return get_catchup_programmes_for_sessions(sessions)

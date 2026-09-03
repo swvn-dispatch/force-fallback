@@ -1,6 +1,6 @@
 # Source Switch
 
-Mobile-friendly Dispatcharr plugin dashboard to view live stream sessions, see connected clients, and force-swap a running channel to a different source, without touching the Dispatcharr admin UI.
+Mobile-friendly Dispatcharr plugin dashboard to view live, VOD, and catch-up connections, see connected clients, and force-swap a running channel to a different source, without touching the Dispatcharr admin UI.
 
 Formerly published as "Force Fallback," renamed because the plugin doesn't do automatic failover: it's a dashboard for manually switching a channel's source.
 
@@ -16,9 +16,11 @@ This project is maintained in my spare time. If it's saved you some headaches, a
 
 A mobile-friendly PWA served under a configurable mount path (**Dashboard Mount Path** setting, default `/stats`). **Enabled by default**; disable it via the **Web Dashboard** setting if you don't want it running. Log in with your Dispatcharr credentials to:
 
-- See every active stream session, uptime, bitrate, and stream stats (resolution, codec, FPS).
+- See active live, VOD, and catch-up connections, including live uptime, bitrate, and stream stats (resolution, codec, FPS).
 - Switch a running channel's source live, without stopping playback for connected clients.
-- View and disconnect individual connected clients per session.
+- View and disconnect individual connected clients per session, including each live client's delivery container and Output Profile.
+- See catch-up programme details and an advancing archived-playback playhead.
+- Stop individual VOD and catch-up viewers.
 - Stop a channel's stream entirely.
 
 Unlike `multiview`, the mount path here is runtime-configurable (not fixed at build time): the plugin injects the currently-configured path into the served page at request time, so the same build works no matter what path you set it to.

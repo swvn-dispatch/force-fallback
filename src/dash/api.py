@@ -174,6 +174,20 @@ def handle_session_detail(environ, start_response, channel_uuid):
         return _json_error(start_response, "500 Internal Server Error", str(e))
 
 
+def handle_media_connections(environ, start_response):
+    if environ.get("REQUEST_METHOD") == "OPTIONS":
+        return cors_preflight(start_response)
+    if not _verify_token(environ):
+        return _json_error(start_response, "401 Unauthorized", "Authentication required")
+    if environ.get("REQUEST_METHOD") != "GET":
+        return _json_error(start_response, "405 Method Not Allowed", "GET only")
+    try:
+        return _json_ok(start_response, _sessions().media_connections())
+    except Exception as e:
+        logger.error(f"Media connections lookup failed: {e}", exc_info=True)
+        return _json_error(start_response, "500 Internal Server Error", str(e))
+
+
 def handle_channel_streams(environ, start_response, channel_uuid):
     if environ.get("REQUEST_METHOD") == "OPTIONS":
         return cors_preflight(start_response)
@@ -255,6 +269,56 @@ def handle_channel_stop(environ, start_response, channel_uuid):
         return _json_error(start_response, "500 Internal Server Error", str(e))
 
 
+def _handle_media_stop(environ, start_response, stop):
+    if environ.get("REQUEST_METHOD") == "OPTIONS":
+        return cors_preflight(start_response)
+    if not _verify_token(environ):
+        return _json_error(start_response, "401 Unauthorized", "Authentication required")
+    if environ.get("REQUEST_METHOD") != "POST":
+        return _json_error(start_response, "405 Method Not Allowed", "POST only")
+    try:
+        result = stop()
+        if result.get("status") == "error":
+            return _json_error(start_response, "404 Not Found", result.get("message", "Stop failed"))
+        return _json_ok(start_response, result)
+    except Exception as e:
+        logger.error(f"Media connection stop failed: {e}", exc_info=True)
+        return _json_error(start_response, "500 Internal Server Error", str(e))
+
+
+def handle_vod_stop(environ, start_response, client_id):
+    return _handle_media_stop(
+        environ, start_response, lambda: _sessions().stop_vod_client(client_id)
+    )
+
+
+def handle_catchup_stop(environ, start_response, session_id):
+    return _handle_media_stop(
+        environ, start_response, lambda: _sessions().stop_catchup_session(session_id)
+    )
+
+
+def handle_catchup_programmes(environ, start_response):
+    if environ.get("REQUEST_METHOD") == "OPTIONS":
+        return cors_preflight(start_response)
+    if not _verify_token(environ):
+        return _json_error(start_response, "401 Unauthorized", "Authentication required")
+    if environ.get("REQUEST_METHOD") != "POST":
+        return _json_error(start_response, "405 Method Not Allowed", "POST only")
+    try:
+        data = json.loads(_read_body(environ) or b"{}")
+    except Exception:
+        return _json_error(start_response, "400 Bad Request", "Invalid JSON")
+    sessions = data.get("sessions")
+    if not isinstance(sessions, list):
+        return _json_error(start_response, "400 Bad Request", "sessions must be an array")
+    try:
+        return _json_ok(start_response, {"sessions": _sessions().catchup_programmes(sessions)})
+    except Exception as e:
+        logger.error(f"Catch-up programme lookup failed: {e}", exc_info=True)
+        return _json_error(start_response, "500 Internal Server Error", str(e))
+
+
 def handle_channel_logo(environ, start_response, channel_uuid):
     # No JWT check: <img> tags can't send an Authorization header, and logos
     # aren't sensitive (Dispatcharr's own logo-cache endpoint is AllowAny too).
@@ -288,6 +352,37 @@ def handle_channel_logo(environ, start_response, channel_uuid):
         ] + _CORS_HEADERS)
         return [data]
 
+    start_response("404 Not Found", [("Content-Type", "text/plain")])
+    return [b"Not Found\n"]
+
+
+def handle_vod_logo(environ, start_response, content_type, content_uuid):
+    if environ.get("REQUEST_METHOD") == "OPTIONS":
+        return cors_preflight(start_response)
+    if environ.get("REQUEST_METHOD") != "GET":
+        return _json_error(start_response, "405 Method Not Allowed", "GET only")
+    try:
+        kind, value = _sessions().vod_logo_info(content_type, content_uuid)
+    except Exception as e:
+        logger.error(f"VOD logo lookup failed: {e}", exc_info=True)
+        kind, value = None, None
+    if kind == "redirect":
+        start_response("302 Found", [("Location", value)] + _CORS_HEADERS)
+        return [b""]
+    if kind == "file":
+        if not os.path.isfile(value):
+            start_response("404 Not Found", [("Content-Type", "text/plain")])
+            return [b"Not Found\n"]
+        mime, _ = mimetypes.guess_type(value)
+        mime = mime or "image/jpeg"
+        with open(value, "rb") as f:
+            data = f.read()
+        start_response("200 OK", [
+            ("Content-Type", mime),
+            ("Content-Length", str(len(data))),
+            ("Cache-Control", "public, max-age=14400"),
+        ] + _CORS_HEADERS)
+        return [data]
     start_response("404 Not Found", [("Content-Type", "text/plain")])
     return [b"Not Found\n"]
 

@@ -1,9 +1,9 @@
 """Dispatcharr Source Switch plugin.
 
-Mobile-friendly Mantine PWA dashboard showing all running stream sessions,
-their live stats, connected clients (with disconnect), and a source-swap
-dropdown -- a plugin-ified, mobile-friendly slice of Dispatcharr's own Stats
-page.
+Mobile-friendly Mantine PWA dashboard showing active live, VOD, and catch-up
+connections, connected clients (with disconnect), and a live source-swap
+dropdown. It is a plugin-ified, mobile-friendly slice of Dispatcharr's own
+Stats page.
 
 Formerly published as "Force Fallback" (settings key `force_fallback`);
 renamed because the plugin doesn't do automatic failover, it's a dashboard

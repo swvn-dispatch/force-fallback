@@ -143,6 +143,10 @@ class SourceSwitchServer:
             return api.handle_auth_refresh(environ, start_response)
         if sub_path == "/api/sessions":
             return api.handle_sessions_list(environ, start_response)
+        if sub_path == "/api/media-connections":
+            return api.handle_media_connections(environ, start_response)
+        if sub_path == "/api/catchup/programmes":
+            return api.handle_catchup_programmes(environ, start_response)
 
         import re
         m = re.match(r"^/api/sessions/([^/]+)$", sub_path)
@@ -164,6 +168,18 @@ class SourceSwitchServer:
         m = re.match(r"^/api/channels/([^/]+)/logo$", sub_path)
         if m:
             return api.handle_channel_logo(environ, start_response, m.group(1))
+
+        m = re.match(r"^/api/vod/(movie|episode)/([^/]+)/logo$", sub_path)
+        if m:
+            return api.handle_vod_logo(environ, start_response, m.group(1), m.group(2))
+
+        m = re.match(r"^/api/vod/clients/([^/]+)/stop$", sub_path)
+        if m:
+            return api.handle_vod_stop(environ, start_response, m.group(1))
+
+        m = re.match(r"^/api/catchup/sessions/([^/]+)/stop$", sub_path)
+        if m:
+            return api.handle_catchup_stop(environ, start_response, m.group(1))
 
         m = re.match(r"^/api/channels/([^/]+)/clients/([^/]+)/disconnect$", sub_path)
         if m:

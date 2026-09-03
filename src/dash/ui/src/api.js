@@ -13,6 +13,10 @@ export function listSessions() {
   return request('/sessions');
 }
 
+export function mediaConnections() {
+  return request('/media-connections');
+}
+
 export function sessionDetail(channelId) {
   return request(`/sessions/${channelId}`);
 }
@@ -40,6 +44,25 @@ export function stopChannel(channelId) {
   });
 }
 
+export function stopVodClient(clientId) {
+  return request(`/vod/clients/${clientId}/stop`, { method: 'POST' });
+}
+
+export function stopCatchupSession(sessionId) {
+  return request(`/catchup/sessions/${sessionId}/stop`, { method: 'POST' });
+}
+
+export function catchupProgrammes(sessions) {
+  return request('/catchup/programmes', {
+    method: 'POST',
+    body: JSON.stringify({ sessions }),
+  });
+}
+
 export function channelLogoUrl(channelId) {
   return `${BASE}api/channels/${channelId}/logo`;
+}
+
+export function vodLogoUrl(contentType, contentId) {
+  return `${BASE}api/vod/${contentType}/${contentId}/logo`;
 }

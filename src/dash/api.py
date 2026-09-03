@@ -319,6 +319,27 @@ def handle_catchup_programmes(environ, start_response):
         return _json_error(start_response, "500 Internal Server Error", str(e))
 
 
+def handle_live_programmes(environ, start_response):
+    if environ.get("REQUEST_METHOD") == "OPTIONS":
+        return cors_preflight(start_response)
+    if not _verify_token(environ):
+        return _json_error(start_response, "401 Unauthorized", "Authentication required")
+    if environ.get("REQUEST_METHOD") != "POST":
+        return _json_error(start_response, "405 Method Not Allowed", "POST only")
+    try:
+        data = json.loads(_read_body(environ) or b"{}")
+    except Exception:
+        return _json_error(start_response, "400 Bad Request", "Invalid JSON")
+    channel_uuids = data.get("channel_uuids")
+    if not isinstance(channel_uuids, list):
+        return _json_error(start_response, "400 Bad Request", "channel_uuids must be an array")
+    try:
+        return _json_ok(start_response, {"programmes": _sessions().live_programmes(channel_uuids)})
+    except Exception as e:
+        logger.error(f"Live programme lookup failed: {e}", exc_info=True)
+        return _json_error(start_response, "500 Internal Server Error", str(e))
+
+
 def handle_channel_logo(environ, start_response, channel_uuid):
     # No JWT check: <img> tags can't send an Authorization header, and logos
     # aren't sensitive (Dispatcharr's own logo-cache endpoint is AllowAny too).

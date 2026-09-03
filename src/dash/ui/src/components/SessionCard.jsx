@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Card, Group, Text, Badge, Select, Accordion, Stack, ActionIcon, Tooltip, Loader, Center, Image } from '@mantine/core';
-import { IconUserOff, IconSquareX, IconVideo, IconCloudUpload, IconCheck } from '@tabler/icons-react';
+import { Card, Group, Text, Badge, Select, Accordion, Stack, ActionIcon, Tooltip, Loader, Center, Image, ThemeIcon } from '@mantine/core';
+import { IconUserOff, IconSquareX, IconVideo, IconCloudUpload, IconCheck, IconLoader2, IconPlayerPlay } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { ConfirmModal, resolveStatusColor } from '@swvn-dispatch/dispatch-ui-kit';
 import { channelStreams, switchSource, disconnectClient, stopChannel, sessionDetail, channelLogoUrl } from '../api.js';
+import ProgramTimeline from './ProgramTimeline.jsx';
 
 function formatUptime(seconds) {
   if (seconds == null) return '-';
@@ -39,9 +40,29 @@ export function StreamStatsBadges({ stats, speed, size = 'sm', ...groupProps }) 
     stats.stream_type ||
     speed != null;
   if (!hasAny) return null;
+  const badgeCount = [
+    stats.resolution,
+    stats.source_fps,
+    stats.video_codec,
+    stats.audio_codec,
+    stats.audio_channels,
+    stats.stream_type,
+    speed != null,
+  ].filter(Boolean).length;
 
   return (
-    <Group gap="xs" {...groupProps}>
+    <Group
+      gap="xs"
+      justify="center"
+      {...groupProps}
+      style={{
+        flexWrap: 'wrap',
+        maxWidth: badgeCount > 3 ? 240 : undefined,
+        justifyContent: 'center',
+        marginInline: 'auto',
+        ...groupProps.style,
+      }}
+    >
       {stats.resolution && (
         <Tooltip label="Video resolution">
           <Badge size={size} variant="light" color="red">
@@ -95,7 +116,7 @@ export function StreamStatsBadges({ stats, speed, size = 'sm', ...groupProps }) 
   );
 }
 
-function SessionStatsBlock({ session, speed }) {
+export function SessionStatsBlock({ session, speed, hideClientCount = false }) {
   return (
     <>
       <Stack gap={4} mb="sm">
@@ -111,12 +132,22 @@ function SessionStatsBlock({ session, speed }) {
           </Text>
           <Text size="sm">{session.avg_bitrate || '-'}</Text>
         </Group>
-        <Group gap="xs" justify="space-between">
-          <Text size="sm" c="dimmed">
-            Clients
-          </Text>
-          <Text size="sm">{session.client_count ?? 0}</Text>
-        </Group>
+        {!hideClientCount && (
+          <Group gap="xs" justify="space-between">
+            <Text size="sm" c="dimmed">
+              Clients
+            </Text>
+            <Text size="sm">{session.client_count ?? 0}</Text>
+          </Group>
+        )}
+        {session.data_sent && (
+          <Group gap="xs" justify="space-between">
+            <Text size="sm" c="dimmed">
+              Data Sent
+            </Text>
+            <Text size="sm">{session.data_sent}</Text>
+          </Group>
+        )}
         {session.stream_profile_name && (
           <Group gap="xs" justify="space-between" wrap="nowrap">
             <Group gap={4} wrap="nowrap" style={{ flexShrink: 0 }}>
@@ -150,8 +181,26 @@ function SessionStatsBlock({ session, speed }) {
   );
 }
 
-export default function SessionCard({ session, onChanged }) {
-  const [streams, setStreams] = useState(null);
+export default function SessionCard({
+  session,
+  onChanged,
+  programme,
+  sourceDisabled = false,
+  sourceOptions = null,
+  onStop,
+  stopLabel = 'Stop Stream',
+  stopMessage,
+  onDisconnect,
+  stopSuccessMessage = 'Stream stopped',
+  disconnectSuccessMessage = 'Client disconnected',
+  hideClientCount = false,
+  logoUrl,
+  statusIcon: StatusIcon,
+  statusLabel,
+  statusColor,
+  timelineMode = 'live',
+}) {
+  const [streams, setStreams] = useState(sourceOptions);
   const [currentStreamId, setCurrentStreamId] = useState(
     session.stream_id != null ? String(session.stream_id) : null,
   );
@@ -162,6 +211,7 @@ export default function SessionCard({ session, onChanged }) {
   const [confirm, setConfirm] = useState(null);
 
   useEffect(() => {
+    if (sourceDisabled) return undefined;
     let cancelled = false;
     channelStreams(session.channel_id)
       .then((data) => {
@@ -173,14 +223,14 @@ export default function SessionCard({ session, onChanged }) {
     return () => {
       cancelled = true;
     };
-  }, [session.channel_id]);
+  }, [session.channel_id, sourceDisabled]);
 
   function ask(title, message, confirmLabel, color, onConfirm) {
     setConfirm({ title, message, confirmLabel, color, onConfirm });
   }
 
   async function handleSwitch(value) {
-    if (!value || value === currentStreamId) return;
+    if (sourceDisabled || !value || value === currentStreamId) return;
     setSwitching(true);
     try {
       await switchSource(session.channel_id, Number(value));
@@ -195,6 +245,7 @@ export default function SessionCard({ session, onChanged }) {
   }
 
   async function loadClients() {
+    if (sourceDisabled) return;
     setClientsLoading(true);
     try {
       const detail = await sessionDetail(session.channel_id);
@@ -208,9 +259,14 @@ export default function SessionCard({ session, onChanged }) {
 
   async function handleDisconnect(clientId) {
     try {
-      await disconnectClient(session.channel_id, clientId);
+      if (onDisconnect) {
+        await onDisconnect(clientId);
+      } else {
+        await disconnectClient(session.channel_id, clientId);
+      }
       setClients((cs) => cs.filter((c) => c.client_id !== clientId));
-      notifications.show({ message: 'Client disconnected', color: 'green' });
+      notifications.show({ message: disconnectSuccessMessage, color: 'green' });
+      onChanged?.();
     } catch (err) {
       notifications.show({ message: err.message, color: 'red' });
     }
@@ -218,8 +274,12 @@ export default function SessionCard({ session, onChanged }) {
 
   async function handleStopStream() {
     try {
-      await stopChannel(session.channel_id);
-      notifications.show({ message: 'Stream stopped', color: 'green' });
+      if (onStop) {
+        await onStop();
+      } else {
+        await stopChannel(session.channel_id);
+      }
+      notifications.show({ message: stopSuccessMessage, color: 'green' });
       onChanged?.();
     } catch (err) {
       notifications.show({ message: err.message, color: 'red' });
@@ -243,7 +303,7 @@ export default function SessionCard({ session, onChanged }) {
       <Group justify="space-between" mb="xs" wrap="nowrap">
         <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
           <Image
-            src={channelLogoUrl(session.channel_id)}
+            src={logoUrl || channelLogoUrl(session.channel_id)}
             alt=""
             h={28}
             w={28}
@@ -259,18 +319,25 @@ export default function SessionCard({ session, onChanged }) {
           </Text>
         </Group>
         <Group gap={6} wrap="nowrap">
-          <Badge color={stateColor} variant="light">
-            {session.state || 'unknown'}
-          </Badge>
+          <Tooltip label={statusLabel || (session.state === 'active' ? 'Live' : session.state || 'unknown')}>
+            <ThemeIcon
+              color={statusColor || stateColor}
+              variant="light"
+              radius="xl"
+              size="sm"
+            >
+              {StatusIcon ? <StatusIcon size={14} /> : session.state === 'active' ? <IconPlayerPlay size={14} /> : <IconLoader2 size={14} />}
+            </ThemeIcon>
+          </Tooltip>
           <Tooltip label="Stop stream">
             <ActionIcon
               variant="subtle"
               color="red"
               onClick={() =>
                 ask(
-                  'Stop Stream',
-                  `Stop the stream for ${name}? All connected clients will be disconnected.`,
-                  'Stop Stream',
+                  stopLabel,
+                  stopMessage || `Stop the stream for ${name}? All connected clients will be disconnected.`,
+                  stopLabel,
                   'red',
                   handleStopStream,
                 )
@@ -290,13 +357,13 @@ export default function SessionCard({ session, onChanged }) {
         data={streamOptions}
         value={currentStreamId}
         onChange={handleSwitch}
-        disabled={switching || streams === null}
+        disabled={sourceDisabled || switching || streams === null}
         mb="sm"
         maxDropdownHeight={320}
         renderOption={({ option, checked }) => (
           <Stack gap={2} py={2} style={{ width: '100%' }}>
             <Group justify="space-between" wrap="nowrap" gap="xs">
-              <Text size="sm" truncate>
+              <Text size="sm" truncate style={{ minWidth: 0, flex: 1 }}>
                 {option.name}
               </Text>
               {checked && <IconCheck size={14} style={{ flexShrink: 0 }} />}
@@ -306,12 +373,15 @@ export default function SessionCard({ session, onChanged }) {
                 {option.provider}
               </Text>
             )}
-            {option.stats && <StreamStatsBadges stats={option.stats} size="xs" />}
+            {option.stats && <StreamStatsBadges stats={option.stats} size="xs" style={{ maxWidth: '100%' }} />}
           </Stack>
         )}
       />
 
-      <SessionStatsBlock session={session} speed={speed} />
+      <div style={{ marginBottom: 'var(--mantine-spacing-md)' }}>
+        <ProgramTimeline programme={programme} session={session} mode={timelineMode} />
+      </div>
+      <SessionStatsBlock session={session} speed={speed} hideClientCount={hideClientCount} />
 
       <Accordion
         value={expanded}
@@ -349,14 +419,14 @@ export default function SessionCard({ session, onChanged }) {
                         {c.user_agent || 'unknown'}
                       </Text>
                       {(c.output_format || c.output_profile_name) && (
-                        <Group gap="xs" mt={2}>
+                        <Group gap="xs" mt={2} wrap="nowrap">
                           {c.output_format && (
-                            <Text size="xs" c="dimmed">
+                            <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
                               Container: {c.output_format}
                             </Text>
                           )}
                           {c.output_profile_name && (
-                            <Text size="xs" c="dimmed">
+                            <Text size="xs" c="dimmed" truncate style={{ minWidth: 0 }}>
                               Output Profile: {c.output_profile_name}
                             </Text>
                           )}

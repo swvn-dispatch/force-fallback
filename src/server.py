@@ -147,6 +147,8 @@ class SourceSwitchServer:
             return api.handle_media_connections(environ, start_response)
         if sub_path == "/api/catchup/programmes":
             return api.handle_catchup_programmes(environ, start_response)
+        if sub_path == "/api/live/programmes":
+            return api.handle_live_programmes(environ, start_response)
 
         import re
         m = re.match(r"^/api/sessions/([^/]+)$", sub_path)

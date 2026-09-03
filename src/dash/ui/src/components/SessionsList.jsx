@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppShell, Stack, Text, SimpleGrid, Center, Loader } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { IconRefresh } from '@tabler/icons-react';
 import { AppHeader } from '@swvn-dispatch/dispatch-ui-kit';
 import logoUrl from '/logo.png';
-import { catchupProgrammes, getUsername, listSessions, mediaConnections } from '../api.js';
+import { catchupProgrammes, getUsername, listSessions, liveProgrammes, mediaConnections } from '../api.js';
 import SessionCard from './SessionCard.jsx';
 import VodConnectionCard from './VodConnectionCard.jsx';
 import CatchupConnectionCard from './CatchupConnectionCard.jsx';
@@ -18,7 +19,9 @@ export default function SessionsList({ onLoggedOut }) {
   const [vod, setVod] = useState([]);
   const [catchup, setCatchup] = useState([]);
   const [programmes, setProgrammes] = useState({});
+  const [liveProgrammeByChannel, setLiveProgrammeByChannel] = useState({});
   const programmesRef = useRef({});
+  const isDesktop = useMediaQuery('(min-width: 48em)');
 
   const refresh = useCallback(async () => {
     try {
@@ -29,6 +32,10 @@ export default function SessionsList({ onLoggedOut }) {
         (a, b) => (a.started_at ?? Infinity) - (b.started_at ?? Infinity),
       );
       setSessions(sorted);
+      const liveData = await liveProgrammes(sorted.map((session) => session.channel_id));
+      setLiveProgrammeByChannel(Object.fromEntries(
+        (liveData.programmes || []).map((programme) => [programme.channel_uuid, programme]),
+      ));
       if (mediaResult.status === 'fulfilled') {
         const media = mediaResult.value;
         const nextCatchup = media.timeshift_sessions || [];
@@ -73,7 +80,7 @@ export default function SessionsList({ onLoggedOut }) {
     ...(sessions || []).map((session) => ({
       id: `live-${session.channel_id}`,
       startedAt: session.started_at || 0,
-      node: <SessionCard session={session} onChanged={refresh} />,
+      node: <SessionCard session={session} programme={liveProgrammeByChannel[session.channel_id]} onChanged={refresh} />,
     })),
     ...vod.flatMap((content) => (content.connections || []).map((connection) => ({
       id: `vod-${connection.client_id}`,
@@ -85,7 +92,7 @@ export default function SessionsList({ onLoggedOut }) {
       startedAt: Number(connection.connected_at) || 0,
       node: <CatchupConnectionCard session={session} connection={connection} programme={programmes[session.session_id]} onChanged={refresh} />,
     }))),
-  ].sort((a, b) => b.startedAt - a.startedAt);
+  ].sort((a, b) => a.startedAt - b.startedAt);
 
   return (
     <AppShell header={{ height: 56 }}>
@@ -124,11 +131,23 @@ export default function SessionsList({ onLoggedOut }) {
           ) : (
             <>
               <Text size="xs" c="dimmed">
-                {sessions.length} live, {vod.reduce((count, item) => count + (item.connections?.length || 0), 0)} VOD, {catchup.reduce((count, item) => count + (item.connections?.length || 0), 0)} catch-up
+                {sessions.length} live, {vod.reduce((count, item) => count + (item.connections?.length || 0), 0)} vod, {catchup.reduce((count, item) => count + (item.connections?.length || 0), 0)} catch-up
               </Text>
-              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-                {cards.map((card) => <div key={card.id}>{card.node}</div>)}
-              </SimpleGrid>
+              {isDesktop ? (
+                <SimpleGrid cols={2} spacing="md">
+                  {[0, 1].map((column) => (
+                    <Stack key={column} gap="md">
+                      {cards.filter((_, index) => index % 2 === column).map((card) => (
+                        <div key={card.id}>{card.node}</div>
+                      ))}
+                    </Stack>
+                  ))}
+                </SimpleGrid>
+              ) : (
+                <Stack gap="md">
+                  {cards.map((card) => <div key={card.id}>{card.node}</div>)}
+                </Stack>
+              )}
             </>
           )}
         </Stack>

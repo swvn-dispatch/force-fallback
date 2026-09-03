@@ -39,4 +39,8 @@ npm install   # needs a personal GitHub Packages PAT, see ui-kit README
 npm run dev
 ```
 
+Run `npm run dev:mock` to preview the dashboard with reusable live, movie,
+series, and catch-up fixture data. The mock accepts any username and password
+and does not require Dispatcharr to be running.
+
 `./package.sh` (repo root) builds the dashboard and packages the full plugin zip; CI (`release.yml`, `dev-prerelease.yml`) does the same with registry auth wired in.

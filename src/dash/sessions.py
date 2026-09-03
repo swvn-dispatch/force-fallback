@@ -6,6 +6,7 @@ plain Python calls -- no HTTP hop, no extra auth needed to reach them.
 
 import logging
 import re
+from datetime import timezone as dt_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -263,6 +264,41 @@ def media_connections() -> dict:
 
     vod = build_vod_stats_data(redis_client).get("vod_connections", [])
     catchup = build_timeshift_stats_data(redis_client).get("timeshift_sessions", [])
+    catchup_stream_ids = {}
+    for session in catchup:
+        stats_channel_id = session.get("stats_channel_id")
+        if not stats_channel_id:
+            continue
+        try:
+            stream_id = redis_client.hget(
+                f"timeshift:channel:{stats_channel_id}:metadata", "stream_id"
+            )
+            if stream_id:
+                catchup_stream_ids[session["session_id"]] = int(stream_id)
+        except (TypeError, ValueError):
+            continue
+
+    if catchup_stream_ids:
+        try:
+            from apps.channels.models import Stream
+
+            streams = {
+                stream.id: stream
+                for stream in Stream.objects.filter(
+                    id__in=catchup_stream_ids.values()
+                ).select_related("m3u_account")
+            }
+            for session in catchup:
+                stream_id = catchup_stream_ids.get(session.get("session_id"))
+                stream = streams.get(stream_id)
+                if stream:
+                    session["source"] = {
+                        "id": stream.id,
+                        "name": stream.name,
+                        "provider": stream.m3u_account.name if stream.m3u_account else None,
+                    }
+        except Exception:
+            logger.debug("Catch-up source lookup failed", exc_info=True)
     for content in vod:
         _enrich_clients(content.get("connections", []))
     for session in catchup:
@@ -303,3 +339,38 @@ def catchup_programmes(sessions: list) -> list:
     from apps.timeshift.helpers import get_catchup_programmes_for_sessions
 
     return get_catchup_programmes_for_sessions(sessions)
+
+
+def live_programmes(channel_uuids: list) -> list:
+    """Return the current EPG programme for each requested live channel."""
+    from django.utils import timezone
+    from apps.channels.models import Channel
+    from apps.epg.models import ProgramData
+
+    valid_uuids = [str(uuid) for uuid in channel_uuids[:50] if uuid]
+    if not valid_uuids:
+        return []
+    channels = Channel.objects.filter(uuid__in=valid_uuids).select_related("epg_data")
+    epg_ids = [channel.epg_data_id for channel in channels if channel.epg_data_id]
+    programmes = ProgramData.objects.filter(
+        epg_id__in=epg_ids,
+        start_time__lte=timezone.now(),
+        end_time__gt=timezone.now(),
+    )
+    programmes_by_epg = {programme.epg_id: programme for programme in programmes}
+    result = []
+    for channel in channels:
+        programme = programmes_by_epg.get(channel.epg_data_id)
+        if not programme:
+            continue
+        duration = (programme.end_time - programme.start_time).total_seconds()
+        result.append({
+            "channel_uuid": str(channel.uuid),
+            "title": programme.title,
+            "sub_title": programme.sub_title or "",
+            "description": programme.description or "",
+            "start_time": programme.start_time.astimezone(dt_timezone.utc).isoformat(),
+            "end_time": programme.end_time.astimezone(dt_timezone.utc).isoformat(),
+            "duration_secs": int(duration),
+        })
+    return result

@@ -59,6 +59,13 @@ export function catchupProgrammes(sessions) {
   });
 }
 
+export function liveProgrammes(channelUuids) {
+  return request('/live/programmes', {
+    method: 'POST',
+    body: JSON.stringify({ channel_uuids: channelUuids }),
+  });
+}
+
 export function channelLogoUrl(channelId) {
   return `${BASE}api/channels/${channelId}/logo`;
 }
